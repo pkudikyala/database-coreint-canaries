@@ -1,0 +1,91 @@
+opentelemetry-collector:
+  # Valid values are "daemonset", "deployment", and "statefulset".
+  mode: "deployment"
+
+  # This section will be overridden for GCP configuration.
+  extraEnvs:
+    - name: NRIA_LICENSE_KEY
+      valueFrom:
+        secretKeyRef:
+          name: newrelic-licenses
+          key: NRIA_LICENSE_KEY
+    - name: NEWRELIC_OTLP_ENDPOINT
+      valueFrom:
+        secretKeyRef:
+          name: newrelic-licenses
+          key: NEWRELIC_OTLP_ENDPOINT
+
+  # Base collector configuration.
+  # Supports templating. To escape existing instances of {{ }}, use {{` <original content> `}}.
+  # For example, {{ REDACTED_EMAIL }} becomes {{` {{ REDACTED_EMAIL }} `}}.
+  config:
+
+    exporters:
+      otlp/newrelic_coreint:
+        endpoint: "${env:NEWRELIC_OTLP_ENDPOINT}"
+        headers:
+          api-key: "${env:NRIA_LICENSE_KEY}"
+
+    extensions:
+      # The health_check extension is mandatory for this chart.
+      # Without the health_check extension the collector will fail the readiness and liveliness probes.
+      # The health_check extension can be modified, but should never be removed.
+      health_check: {}
+      # memory_ballast: {}
+
+    processors:
+      batch: {}
+      # If set to null, will be overridden with values based on k8s resource limits
+      memory_limiter: null
+      attributes/cluster_name:
+        actions:
+          - key: cluster_name # This attribute is used internally and do not follow any convention
+            value: local-dev
+            action: insert
+
+    service:
+      telemetry:
+        metrics:
+          address: 0.0.0.0:8888
+        logs:
+          level: "info"
+      extensions:
+        - health_check
+        # - memory_ballast
+      pipelines:
+        metrics:
+          # This section will be overridden for GCP configuration.
+          exporters:
+            - otlp/newrelic_coreint
+          processors:
+            - memory_limiter
+            - batch
+            - attributes/cluster_name
+          # each specific canary is supposed to set the corresponding receivers
+
+  image:
+    # If you want to use the core image `otel/opentelemetry-collector`, you also need to change `command.name` value to `otelcol`.
+    repository: otel/opentelemetry-collector-contrib
+    pullPolicy: IfNotPresent
+    # NRDOT example:
+    # repository: newrelic/nr-otel-collector
+    # pullPolicy: IfNotPresent
+    # Overrides the image tag whose default is the chart appVersion.
+    # tag: "0.0.1-rc"
+
+  # OpenTelemetry Collector executable
+  command:
+    name: otelcol-contrib
+    # NRDOT example:
+    # name: nr-otel-collector
+    # disable prometheus.Normalize name to avoid altering prometheus metrics names
+    # check <https://github.com/open-telemetry/opentelemetry-collector-contrib/issues/21743> for additional context.
+    # extraArgs: ["--feature-gates=-pkg.translator.prometheus.NormalizeName"]
+
+  resources:
+    limits:
+      cpu: 500m
+      memory: 300Mi
+    requests:
+      cpu: 100m
+      memory: 100Mi

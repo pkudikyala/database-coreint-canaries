@@ -1,0 +1,77 @@
+opentelemetry-collector: # check base config is in ../../common/values-otel-contrib.yaml for details
+  podLabels:
+    environment: unknown
+  config:
+
+    receivers:
+      # Configuration doesnt't leverage autodiscovery to mimic onHost
+      mysql:
+        endpoint: "mysql:3306"
+        username: root
+        password: test-password
+        # Enable optional metrics
+        metrics:
+          mysql.client.network.io:
+            enabled: true
+          mysql.commands:
+            enabled: true
+          mysql.connection.count:
+            enabled: true
+          mysql.connection.errors:
+            enabled: true
+          mysql.joins:
+            enabled: true
+          mysql.mysqlx_worker_threads:
+            enabled: true
+          mysql.query.client.count:
+            enabled: true
+          mysql.query.count:
+            enabled: true
+          mysql.query.slow.count:
+            enabled: true
+          mysql.replica.sql_delay:
+            enabled: true
+          mysql.replica.time_behind_source:
+            enabled: true
+          mysql.statement_event.count:
+            enabled: true
+          mysql.statement_event.wait.time:
+            enabled: true
+          mysql.table.lock_wait.read.count:
+            enabled: true
+          mysql.table.lock_wait.read.time:
+            enabled: true
+          mysql.table.lock_wait.write.count:
+            enabled: true
+          mysql.table.lock_wait.write.time:
+            enabled: true
+          mysql.table_open_cache:
+            enabled: true
+
+    processors:
+      memory_limiter:
+        check_interval: 5s
+        limit_percentage: 80
+        spike_limit_percentage: 25
+      attributes/mysql_metrics:
+        include:
+          match_type: regexp
+          metric_names: ["mysql\\..*"]
+        actions:
+          - action: upsert
+            key: server.address
+            value: "mysql"
+          - action: upsert
+            key: server.port
+            value: "3306"
+
+    service:
+      pipelines:
+        metrics: # metrics pipeline is defined in the common values, setting up defaults we override what is needed
+          processors:
+            - memory_limiter
+            - batch
+            - attributes/cluster_name
+            - attributes/mysql_metrics
+          receivers:
+            - mysql

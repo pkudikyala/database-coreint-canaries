@@ -1,0 +1,37 @@
+environment: stable
+
+nodeSelector:
+  role: stable
+
+podLabels:
+  environment: stable
+
+opentelemetry-collector:
+  nodeSelector:
+    role: stable
+  podLabels:
+    environment: stable
+  config:
+    receivers:
+      mysql:
+        endpoint: "mysql-stable:3306"
+
+client:
+  podLabels:
+    environment: stable
+  nodeSelector:
+    role: stable
+
+opentelemetry-collector:
+  image:
+    tag: "0.155.0"  # pinned stable version — only update after RC is promoted to GA
+  config:
+    receivers:
+      mysql:
+        endpoint: "mysql-stable:3306"
+
+mysql:
+  nodeSelector:
+    role: stable
+  podLabels:
+    environment: stable
