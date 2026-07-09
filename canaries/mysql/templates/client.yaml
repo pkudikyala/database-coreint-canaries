@@ -1,0 +1,40 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "mysql.fullname" . }}-client
+  labels:
+    {{- include "mysql.labels" . | nindent 4 }}
+    role: client
+spec:
+  replicas: {{ .Values.client.replicaCount  }}
+  selector:
+    matchLabels:
+      {{- include "mysql.selectorLabels" . | nindent 6 }}
+      role: client
+  template:
+    metadata:
+      labels:
+        {{- include "mysql.selectorLabels" . | nindent 8 }}
+        role: client
+        environment: {{ .Values.client.podLabels.environment }}
+    spec:
+      nodeSelector:
+        {{- toYaml .Values.client.nodeSelector | nindent 8 }}
+      terminationGracePeriodSeconds: 0
+      containers:
+        - name: client
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          env:
+            - name: MYSQL_ROOT_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  key: rootPassword
+                  name: {{ include "mysql.fullname" .   }}
+          command: ["bash"]
+          args:
+            - -c
+            - |
+              {{- tpl .Values.client.script . | nindent 14 }}
+          resources:
+            {{- toYaml .Values.client.resources | nindent 12 }}

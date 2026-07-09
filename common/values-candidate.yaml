@@ -1,0 +1,37 @@
+environment: candidate
+
+nodeSelector:
+  role: candidate
+
+podLabels:
+  environment: candidate
+
+opentelemetry-collector:
+  nodeSelector:
+    role: candidate
+  podLabels:
+    environment: candidate
+  config:
+    receivers:
+      mysql:
+        endpoint: "mysql-candidate:3306"
+
+client:
+  podLabels:
+    environment: candidate
+  nodeSelector:
+    role: candidate
+
+opentelemetry-collector:
+  image:
+    tag: "0.156.0"  # RC version under test — update this when a new RC is cut
+  config:
+    receivers:
+      mysql:
+        endpoint: "mysql-candidate:3306"
+
+mysql:
+  nodeSelector:
+    role: candidate
+  podLabels:
+    environment: candidate
