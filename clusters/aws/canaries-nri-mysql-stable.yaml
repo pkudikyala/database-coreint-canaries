@@ -1,0 +1,29 @@
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: can-nri-mysql-stable
+  namespace: tools-argocd
+spec:
+  project: canaries
+  source:
+    path: canaries/nri-mysql
+    repoURL: https://github.com/pkudikyala/database-coreint-canaries.git
+    targetRevision: main
+    helm:
+      releaseName: nri-mysql-stable
+      valueFiles:
+        - values.yaml
+        - values-stable.yaml
+      parameters:
+        - name: environment
+          value: stable
+  destination:
+    namespace: can-nri-mysql-stable
+    server: https://kubernetes.default.svc
+  syncPolicy:
+    syncOptions:
+      - CreateNamespace=true
+    automated:
+      prune: true
+      selfHeal: true

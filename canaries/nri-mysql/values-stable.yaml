@@ -1,0 +1,20 @@
+environment: stable
+
+nodeSelector:
+  role: stable
+
+nri-bundle:
+  global:
+    customSecretName: newrelic-licenses-stable
+    customSecretLicenseKey: NRIA_LICENSE_KEY
+  newrelic-infrastructure:
+    podLabels:
+      environment: stable
+    nodeSelector:
+      role: stable
+    images:
+      agent:
+        repository: newrelic/infrastructure-bundle
+        tag: latest@sha256:1a292cfc7098e9868ccb8f685fe357d10966a9e2f65ade13938fc7a70c693916
+        # renovate: datasource=docker depName=newrelic/infrastructure-bundle versioning=docker
+        pullPolicy: Always

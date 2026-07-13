@@ -1,0 +1,42 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Release.Name }}-mysql-client
+  labels:
+    app.kubernetes.io/name: nri-mysql
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    role: client
+spec:
+  replicas: {{ .Values.client.replicaCount }}
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: nri-mysql
+      app.kubernetes.io/instance: {{ .Release.Name }}
+      role: client
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: nri-mysql
+        app.kubernetes.io/instance: {{ .Release.Name }}
+        role: client
+    spec:
+      nodeSelector:
+        {{- toYaml .Values.nodeSelector | nindent 8 }}
+      terminationGracePeriodSeconds: 0
+      containers:
+        - name: client
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          env:
+            - name: MYSQL_ROOT_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  key: rootPassword
+                  name: {{ .Release.Name }}-mysql
+          command: ["bash"]
+          args:
+            - -c
+            - |
+              {{- tpl .Values.client.script . | nindent 14 }}
+          resources:
+            {{- toYaml .Values.client.resources | nindent 12 }}

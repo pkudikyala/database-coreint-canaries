@@ -1,0 +1,11 @@
+argo-cd:
+  server:
+    extraArgs:
+      - --insecure
+
+  configs:
+    repositories:
+      database-coreint-canaries:
+        url: https://github.com/pkudikyala/database-coreint-canaries.git
+        name: database-coreint-canaries
+        type: git
