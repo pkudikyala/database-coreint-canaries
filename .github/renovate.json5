@@ -1,0 +1,94 @@
+{
+  "extends": ["config:base"],
+  "includePaths": [
+    "canaries/nri-mysql/values-stable.yaml",    // nri-mysql stable infra-bundle digest
+    "canaries/nri-mysql/values-candidate.yaml", // nri-mysql candidate infra-bundle digest
+    "common/values-stable.yaml",                // OTel collector stable image tag
+    "common/values-candidate.yaml",             // OTel collector candidate image tag
+    "canaries/*/Chart.yaml"                     // Helm chart dependency versions
+  ],
+  "regexManagers": [
+    {
+      // Updates newrelic/infrastructure-bundle digest in nri-mysql stable values
+      "description": "nri-mysql stable infrastructure-bundle digest update",
+      "datasourceTemplate": "docker",
+      "fileMatch": ["^canaries/nri-mysql/values-stable\\.yaml$"],
+      "matchStrings": [
+        " *repository: (?<depName>.+)\n *tag: (?<currentValue>.*?)@(?<currentDigest>sha256:[a-f0-9]+)"
+      ]
+    },
+    {
+      // Updates newrelic/infrastructure-bundle digest in nri-mysql candidate values
+      "description": "nri-mysql candidate infrastructure-bundle digest update",
+      "datasourceTemplate": "docker",
+      "fileMatch": ["^canaries/nri-mysql/values-candidate\\.yaml$"],
+      "matchStrings": [
+        " *repository: (?<depName>.+)\n *tag: (?<currentValue>.*?)@(?<currentDigest>sha256:[a-f0-9]+)"
+      ]
+    },
+    {
+      // Updates OTel collector image tag in common/values-stable.yaml
+      "description": "OTel collector stable image tag update",
+      "datasourceTemplate": "docker",
+      "depNameTemplate": "otel/opentelemetry-collector-contrib",
+      "fileMatch": ["^common/values-stable\\.yaml$"],
+      "matchStrings": [
+        " *tag: \"(?<currentValue>[0-9]+\\.[0-9]+\\.[0-9]+)\".*stable"
+      ]
+    },
+    {
+      // Updates OTel collector image tag in common/values-candidate.yaml
+      "description": "OTel collector candidate image tag update",
+      "datasourceTemplate": "docker",
+      "depNameTemplate": "otel/opentelemetry-collector-contrib",
+      "fileMatch": ["^common/values-candidate\\.yaml$"],
+      "matchStrings": [
+        " *tag: \"(?<currentValue>[0-9]+\\.[0-9]+\\.[0-9]+)\".*RC"
+      ]
+    }
+  ],
+  "packageRules": [
+    {
+      // Auto-merge infrastructure-bundle stable digest updates (safe — stable tag only moves on GA release)
+      "description": "Auto-merge stable infrastructure-bundle digest updates",
+      "matchDepNames": ["newrelic/infrastructure-bundle"],
+      "matchFileNames": ["canaries/nri-mysql/values-stable.yaml"],
+      "automerge": true,
+      "automergeType": "branch",
+      "pruneBranchAfterAutomerge": true
+    },
+    {
+      // Auto-merge infrastructure-bundle candidate digest updates (a2q-candidate updates when new RC is cut)
+      "description": "Auto-merge candidate infrastructure-bundle digest updates",
+      "matchDepNames": ["newrelic/infrastructure-bundle"],
+      "matchFileNames": ["canaries/nri-mysql/values-candidate.yaml"],
+      "automerge": true,
+      "automergeType": "branch",
+      "pruneBranchAfterAutomerge": true
+    },
+    {
+      // Auto-merge OTel stable tag updates
+      "description": "Auto-merge OTel stable tag updates",
+      "matchDepNames": ["otel/opentelemetry-collector-contrib"],
+      "matchFileNames": ["common/values-stable.yaml"],
+      "automerge": true,
+      "automergeType": "branch",
+      "pruneBranchAfterAutomerge": true
+    },
+    {
+      // Auto-merge OTel candidate tag updates
+      "description": "Auto-merge OTel candidate tag updates",
+      "matchDepNames": ["otel/opentelemetry-collector-contrib"],
+      "matchFileNames": ["common/values-candidate.yaml"],
+      "automerge": true,
+      "automergeType": "branch",
+      "pruneBranchAfterAutomerge": true
+    },
+    {
+      // Disable Helm chart version bumps (we pin manually)
+      "matchPackagePatterns": [".*"],
+      "matchManagers": ["helmv3"],
+      "enabled": false
+    }
+  ]
+}

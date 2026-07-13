@@ -53,6 +53,9 @@ opentelemetry-collector: # check base config is in ../../common/values-otel-cont
         check_interval: 5s
         limit_percentage: 80
         spike_limit_percentage: 25
+      resourcedetection/env:
+        detectors: [env, system]
+        override: false
       attributes/mysql_metrics:
         include:
           match_type: regexp
@@ -67,9 +70,10 @@ opentelemetry-collector: # check base config is in ../../common/values-otel-cont
 
     service:
       pipelines:
-        metrics: # metrics pipeline is defined in the common values, setting up defaults we override what is needed
+        metrics:
           processors:
             - memory_limiter
+            - resourcedetection/env
             - batch
             - attributes/cluster_name
             - attributes/mysql_metrics

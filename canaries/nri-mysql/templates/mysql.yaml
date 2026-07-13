@@ -1,0 +1,125 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Release.Name }}-mysql
+  labels:
+    app.kubernetes.io/name: nri-mysql
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    role: database
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: nri-mysql
+      app.kubernetes.io/instance: {{ .Release.Name }}
+      role: database
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: nri-mysql
+        app.kubernetes.io/instance: {{ .Release.Name }}
+        role: database
+        environment: {{ .Values.environment | default "unknown" }}
+    spec:
+      nodeSelector:
+        {{- toYaml .Values.nodeSelector | nindent 8 }}
+      containers:
+        - name: mysql
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          env:
+            - name: MYSQL_ROOT_HOST
+              value: '%'
+            - name: MYSQL_ROOT_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  key: rootPassword
+                  name: {{ .Release.Name }}-mysql
+          ports:
+            - name: mysql
+              containerPort: 3306
+              protocol: TCP
+          livenessProbe:
+            failureThreshold: 5
+            periodSeconds: 20
+            tcpSocket:
+              port: 3306
+            timeoutSeconds: 5
+          readinessProbe:
+            tcpSocket:
+              port: 3306
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+          volumeMounts:
+            - name: initdb
+              mountPath: /docker-entrypoint-initdb.d
+            - name: mysql-config
+              mountPath: /etc/my.cnf.d/performance.cnf
+              subPath: performance.cnf
+      volumes:
+        - name: initdb
+          configMap:
+            name: {{ .Release.Name }}-mysql-initdb
+        - name: mysql-config
+          configMap:
+            name: {{ .Release.Name }}-mysql-config
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ .Release.Name }}-mysql-config
+data:
+  performance.cnf: |
+    [mysqld]
+    performance_schema=ON
+    max_digest_length = 4096
+    performance_schema_max_digest_length = 4096
+    performance_schema_max_sql_text_length = 4096
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ .Release.Name }}-mysql-initdb
+data:
+  01-sample.sql: |
+    CREATE DATABASE IF NOT EXISTS `sample_database`;
+    USE sample_database;
+    CREATE TABLE IF NOT EXISTS `sample_table` (
+      `id` int(11) NOT NULL
+    );
+  02-performance-schema.sql: |
+    -- Enable required Performance Schema instruments
+    UPDATE performance_schema.setup_instruments
+    SET ENABLED = 'YES', TIMED = 'YES'
+    WHERE NAME LIKE 'wait/%' OR NAME LIKE 'statement/%' OR NAME LIKE '%lock%';
+
+    UPDATE performance_schema.setup_consumers
+    SET enabled='YES'
+    WHERE name LIKE 'events_statements_%' OR name LIKE 'events_waits_%';
+
+    -- Increase InnoDB lock wait timeout
+    SET GLOBAL innodb_lock_wait_timeout = 120;
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: {{ .Release.Name }}-mysql
+stringData:
+  rootPassword: {{ .Values.rootPassword }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ .Release.Name }}-mysql
+  labels:
+    app.kubernetes.io/name: nri-mysql
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    role: database
+spec:
+  ports:
+    - name: mysql
+      port: 3306
+  selector:
+    app.kubernetes.io/name: nri-mysql
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    role: database

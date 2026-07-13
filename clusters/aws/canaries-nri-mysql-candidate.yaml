@@ -1,0 +1,29 @@
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: can-nri-mysql-candidate
+  namespace: tools-argocd
+spec:
+  project: canaries
+  source:
+    path: canaries/nri-mysql
+    repoURL: https://github.com/pkudikyala/database-coreint-canaries.git
+    targetRevision: main
+    helm:
+      releaseName: nri-mysql-candidate
+      valueFiles:
+        - values.yaml
+        - values-candidate.yaml
+      parameters:
+        - name: environment
+          value: candidate
+  destination:
+    namespace: can-nri-mysql-candidate
+    server: https://kubernetes.default.svc
+  syncPolicy:
+    syncOptions:
+      - CreateNamespace=true
+    automated:
+      prune: true
+      selfHeal: true

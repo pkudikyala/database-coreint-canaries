@@ -1,0 +1,57 @@
+# Apply this file manually once to bootstrap ArgoCD on the EKS cluster.
+# It creates the AppProjects and a meta-Application that watches clusters/aws/
+# and keeps all canary Applications in sync automatically.
+#
+# kubectl apply -f clusters/bootstrap.yaml -n tools-argocd
+---
+apiVersion: argoproj.io/v1alpha1
+kind: AppProject
+metadata:
+  name: cluster-meta
+  namespace: tools-argocd
+spec:
+  description: Cluster tooling (ArgoCD self-management)
+  sourceRepos:
+    - https://github.com/pkudikyala/database-coreint-canaries.git
+  destinations:
+    - namespace: '*'
+      server: https://kubernetes.default.svc
+  clusterResourceWhitelist:
+    - group: '*'
+      kind: '*'
+---
+apiVersion: argoproj.io/v1alpha1
+kind: AppProject
+metadata:
+  name: canaries
+  namespace: tools-argocd
+spec:
+  description: Database integration canary deployments
+  sourceRepos:
+    - https://github.com/pkudikyala/database-coreint-canaries.git
+  destinations:
+    - namespace: '*'
+      server: https://kubernetes.default.svc
+  clusterResourceWhitelist:
+    - group: '*'
+      kind: '*'
+---
+# Meta-Application: watches clusters/aws/ and applies all Application manifests automatically
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: aws-bootstrap
+  namespace: tools-argocd
+spec:
+  project: cluster-meta
+  source:
+    path: clusters/aws
+    repoURL: https://github.com/pkudikyala/database-coreint-canaries.git
+    targetRevision: main
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: tools-argocd
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true

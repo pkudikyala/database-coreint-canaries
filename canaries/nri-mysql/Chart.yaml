@@ -1,0 +1,11 @@
+apiVersion: v2
+name: nri-mysql
+description: MySQL canary using nri-bundle with nri-mysql integration (creates MysqlSample events)
+type: application
+version: 1.0.0
+appVersion: "8.0"
+
+dependencies:
+  - name: nri-bundle
+    repository: https://helm-charts.newrelic.com
+    version: ^5.0.0

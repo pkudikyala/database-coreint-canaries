@@ -1,0 +1,130 @@
+rootPassword: test-password
+
+replicaCount: 1
+
+image:
+  repository: mysql/mysql-server
+  pullPolicy: IfNotPresent
+  tag: ""
+
+resources:
+  limits:
+    cpu: 300m
+    memory: 1.2G
+  requests:
+    cpu: 150m
+    memory: 900Mi
+
+nodeSelector:
+  role: stable
+
+client:
+  replicaCount: 3
+  resources:
+    limits:
+      cpu: 200m
+      memory: 50Mi
+    requests:
+      cpu: 100m
+      memory: 10Mi
+  script: |
+    function execute() { mysql -u root -h{{ .Release.Name }}-mysql -p${MYSQL_ROOT_PASSWORD} sample_database -e "$@" 2>/dev/null; }
+    MAX_KEYS=10000
+    function key() { KEY=$((RANDOM % $MAX_KEYS)); }
+
+    # Ensure extra tables exist for richer workload
+    execute "CREATE TABLE IF NOT EXISTS sample_table2 (id int, val varchar(255), ts TIMESTAMP DEFAULT CURRENT_TIMESTAMP);"
+    execute "CREATE TABLE IF NOT EXISTS sample_large (id int PRIMARY KEY, data TEXT);"
+
+    while true; do
+      key
+
+      # Basic CRUD
+      execute "INSERT INTO sample_table VALUES (${KEY});"
+      execute "SELECT * FROM sample_table WHERE id = ${KEY};"
+      execute "DELETE FROM sample_table WHERE id = ${KEY};"
+
+      # Slow queries — full table scans to generate slow query events
+      execute "SELECT COUNT(*) FROM sample_table WHERE id > 0;"
+      execute "SELECT * FROM sample_table ORDER BY id DESC LIMIT 1000;"
+
+      # Write to secondary table to generate statement events
+      execute "INSERT INTO sample_table2 (id, val) VALUES (${KEY}, REPEAT('x', 255)) ON DUPLICATE KEY UPDATE val=VALUES(val);"
+      execute "SELECT * FROM sample_table2 WHERE val LIKE '%x%' LIMIT 100;"
+
+      # Generate lock contention — start a transaction and hold it briefly
+      execute "START TRANSACTION; UPDATE sample_table2 SET val='locked' WHERE id=${KEY}; SELECT SLEEP(0.5); COMMIT;"
+
+      # Aggregate query to stress CPU and generate wait events
+      execute "SELECT COUNT(*), MAX(id), MIN(id) FROM sample_table2 GROUP BY YEAR(ts);"
+
+      sleep $((RANDOM % 2))
+    done
+
+nri-bundle:
+  global:
+    cluster: db-integrations-canaries
+    customSecretName: newrelic-licenses
+    customSecretLicenseKey: NRIA_LICENSE_KEY
+    nrStaging: false
+
+  newrelic-infrastructure:
+    enabled: true
+    privileged: true
+    podLabels:
+      environment: unknown
+    images:
+      integration:
+        pullPolicy: Always
+        tag: latest
+      agent:
+        pullPolicy: Always
+        repository: newrelic/infrastructure-bundle
+        tag: latest
+      forwarder:
+        pullPolicy: Always
+        repository: newrelic/k8s-events-forwarder
+        tag: latest
+    controlPlane:
+      enabled: false
+    customAttributes:
+      environment: canaries
+    integrations:
+      mysql-config:
+        discovery:
+          command:
+            exec: /var/db/newrelic-infra/nri-discovery-kubernetes --port 10250 --tls
+            match:
+              label.app.kubernetes.io/name: nri-mysql
+              label.role: database
+        integrations:
+          - name: nri-mysql
+            env:
+              HOSTNAME: ${discovery.ip}
+              PORT: 3306
+              USERNAME: root
+              PASSWORD: test-password
+              EXTENDED_METRICS: true
+              EXTENDED_INNODB_METRICS: true
+              EXTENDED_MY_ISAM_METRICS: true
+              REMOTE_MONITORING: true
+              ENABLE_QUERY_MONITORING: true
+              SLOW_QUERY_MONITORING_FETCH_INTERVAL: 30
+              QUERY_MONITORING_RESPONSE_TIME_THRESHOLD: 1
+              QUERY_MONITORING_COUNT_THRESHOLD: 20
+            labels:
+              env: test
+              integration: mysql
+
+  nri-prometheus:
+    enabled: false
+  nri-metadata-injection:
+    enabled: false
+  nri-kube-events:
+    enabled: false
+  ksm:
+    enabled: false
+  newrelic-logging:
+    enabled: false
+  newrelic-k8s-metrics-adapter:
+    enabled: false

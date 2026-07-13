@@ -1,0 +1,20 @@
+environment: candidate
+
+nodeSelector:
+  role: candidate
+
+nri-bundle:
+  global:
+    customSecretName: newrelic-licenses-candidate
+    customSecretLicenseKey: NRIA_LICENSE_KEY
+  newrelic-infrastructure:
+    podLabels:
+      environment: candidate
+    nodeSelector:
+      role: candidate
+    images:
+      agent:
+        repository: newrelic/infrastructure-bundle
+        tag: a2q-candidate@sha256:976389cf0b7df271dce968831e9ecba8ef58ca53a625367f8299796ed2ba1b30
+        # renovate: datasource=docker depName=newrelic/infrastructure-bundle versioning=docker
+        pullPolicy: Always

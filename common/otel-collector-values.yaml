@@ -40,7 +40,7 @@ opentelemetry-collector:
       attributes/cluster_name:
         actions:
           - key: cluster_name # This attribute is used internally and do not follow any convention
-            value: local-dev
+            value: db-integrations-canaries
             action: insert
 
     service:
