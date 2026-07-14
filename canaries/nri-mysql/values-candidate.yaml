@@ -15,6 +15,6 @@ nri-bundle:
     images:
       agent:
         repository: newrelic/infrastructure-bundle
-        tag: a2q-candidate@sha256:976389cf0b7df271dce968831e9ecba8ef58ca53a625367f8299796ed2ba1b30
+        tag: a2q-candidate@sha256:bc3d01127c75e4e13b48413a4b64c532f32ed4323aeb0414bc6fc9e290b526e6
         # renovate: datasource=docker depName=newrelic/infrastructure-bundle versioning=docker
         pullPolicy: Always
