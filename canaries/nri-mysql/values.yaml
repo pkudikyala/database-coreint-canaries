@@ -66,11 +66,14 @@ nri-bundle:
     cluster: db-integrations-canaries
     customSecretName: newrelic-licenses
     customSecretLicenseKey: NRIA_LICENSE_KEY
-    nrStaging: false
+    nrStaging: true
 
   newrelic-infrastructure:
     enabled: true
     privileged: true
+    nrStaging: true
+    config:
+      staging: true
     podLabels:
       environment: unknown
     images:
