@@ -1,0 +1,54 @@
+# Host/repo the rotation scripts run against -- the canonical repo on
+# source.datanerd.us, NOT the github.com fork that ArgoCD happens to sync
+# this chart from. Those are two different things: this chart's own source
+# location is irrelevant to what repo the CronJobs open PRs against.
+git:
+  host: source.datanerd.us
+  org: data-integrations
+  repo: database-corient-canaries
+  # Secret created once via `make rotation-cron-up` (see Makefile) --
+  # never committed, never templated from a chart-managed Secret resource.
+  # Same convention this repo already uses for newrelic-licenses-* (see
+  # canaries/*/Makefile's `kubectl create secret` targets).
+  tokenSecretName: rotation-git-token
+  tokenSecretKey: GIT_TOKEN
+  # Identity used for commits opened by these jobs -- adjust if the Vault
+  # token in tokenSecretName belongs to a specific bot/service account with
+  # its own preferred identity.
+  commitUserName: a2q-rotation-bot
+  commitUserEmail: a2q-rotation-bot@users.noreply.github.com
+
+# Pinned like every other version knob in this repo (e.g.
+# nri-oracle/values.yaml's oracleAgent.nriOracledbVersion) rather than
+# floating -- a `gh` release is a new binary to trust, not something to
+# silently auto-update.
+ghCliVersion: "2.62.0"
+
+image:
+  repository: debian
+  tag: bookworm-slim
+  pullPolicy: IfNotPresent
+
+nodeSelector: {}
+
+resources:
+  requests:
+    cpu: 50m
+    memory: 128Mi
+  limits:
+    cpu: 500m
+    memory: 512Mi
+
+nrdotRotation:
+  # Wed 09:23 UTC -- identical slot to the dead nrdot-collector-rotation.yml.
+  schedule: "23 9 * * 3"
+  script: scripts/bump_nrdot_collector.py
+  branchPrefix: bump/nrdot-collector
+  prTitle: "Rotate NRDOT collector version (automated)"
+
+infraBundleRotation:
+  # Thu 10:47 UTC -- identical slot to the dead infra-bundle-digest-rotation.yml.
+  schedule: "47 10 * * 4"
+  script: scripts/bump_infra_bundle_digest.py
+  branchPrefix: bump/infra-bundle-digest
+  prTitle: "Rotate infrastructure-bundle digest (automated)"

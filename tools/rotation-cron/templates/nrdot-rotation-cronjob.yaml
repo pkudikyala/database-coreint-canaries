@@ -1,0 +1,54 @@
+# Replaces .github/workflows/nrdot-collector-rotation.yml, which was never
+# able to run: this GHE instance has no GitHub-hosted runners and self-hosted
+# runners are disabled by an admin for this repo, so `runs-on: ubuntu-latest`
+# queues forever and the scheduled run gets auto-killed ~36h later, every
+# time, with nothing ever executed. See scripts/bump_nrdot_collector.py for
+# what this rotation actually does and why it isn't a plain "bump to latest".
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: nrdot-rotation
+  labels:
+    app.kubernetes.io/name: rotation-cron
+    app.kubernetes.io/component: nrdot-rotation
+spec:
+  schedule: {{ .Values.nrdotRotation.schedule | quote }}
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 1
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      # One retry only: a fresh clone makes most failures safe to retry, but
+      # a retry after a successful `git push` (failure only in the final `gh
+      # pr create` step) would hit an already-existing remote branch -- not
+      # harmful, just a clean failure, so this isn't tuned any higher.
+      backoffLimit: 1
+      activeDeadlineSeconds: 900
+      template:
+        metadata:
+          labels:
+            app.kubernetes.io/name: rotation-cron
+            app.kubernetes.io/component: nrdot-rotation
+        spec:
+          {{- with .Values.nodeSelector }}
+          nodeSelector:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          restartPolicy: Never
+          containers:
+            - name: nrdot-rotation
+              image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+              imagePullPolicy: {{ .Values.image.pullPolicy }}
+              env:
+                - name: GIT_TOKEN
+                  valueFrom:
+                    secretKeyRef:
+                      name: {{ .Values.git.tokenSecretName }}
+                      key: {{ .Values.git.tokenSecretKey }}
+              resources:
+                {{- toYaml .Values.resources | nindent 16 }}
+              command:
+                - /bin/bash
+                - -c
+                - |
+                  {{- include "rotation-cron.jobScript" (dict "Values" .Values "script" .Values.nrdotRotation.script "branchPrefix" .Values.nrdotRotation.branchPrefix "prTitle" .Values.nrdotRotation.prTitle) | nindent 18 }}

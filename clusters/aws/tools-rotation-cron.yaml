@@ -1,0 +1,21 @@
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: tools-rotation-cron
+  namespace: tools-argocd
+spec:
+  project: cluster-meta
+  source:
+    path: tools/rotation-cron
+    repoURL: https://github.com/pkudikyala/database-coreint-canaries.git
+    targetRevision: main
+  destination:
+    namespace: tools-rotation-cron
+    server: https://kubernetes.default.svc
+  syncPolicy:
+    syncOptions:
+      - CreateNamespace=true
+    automated:
+      prune: true
+      selfHeal: true

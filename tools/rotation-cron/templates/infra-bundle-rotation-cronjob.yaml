@@ -1,0 +1,48 @@
+# Replaces .github/workflows/infra-bundle-digest-rotation.yml -- same dead-
+# runner problem as nrdot-rotation-cronjob.yaml (see that file's header
+# comment). See scripts/bump_infra_bundle_digest.py for what this rotation
+# actually does, the KNOWN_BAD_DIGESTS guard, and why nri-oracle is excluded.
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: infra-bundle-rotation
+  labels:
+    app.kubernetes.io/name: rotation-cron
+    app.kubernetes.io/component: infra-bundle-rotation
+spec:
+  schedule: {{ .Values.infraBundleRotation.schedule | quote }}
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 1
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      backoffLimit: 1
+      activeDeadlineSeconds: 900
+      template:
+        metadata:
+          labels:
+            app.kubernetes.io/name: rotation-cron
+            app.kubernetes.io/component: infra-bundle-rotation
+        spec:
+          {{- with .Values.nodeSelector }}
+          nodeSelector:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          restartPolicy: Never
+          containers:
+            - name: infra-bundle-rotation
+              image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+              imagePullPolicy: {{ .Values.image.pullPolicy }}
+              env:
+                - name: GIT_TOKEN
+                  valueFrom:
+                    secretKeyRef:
+                      name: {{ .Values.git.tokenSecretName }}
+                      key: {{ .Values.git.tokenSecretKey }}
+              resources:
+                {{- toYaml .Values.resources | nindent 16 }}
+              command:
+                - /bin/bash
+                - -c
+                - |
+                  {{- include "rotation-cron.jobScript" (dict "Values" .Values "script" .Values.infraBundleRotation.script "branchPrefix" .Values.infraBundleRotation.branchPrefix "prTitle" .Values.infraBundleRotation.prTitle) | nindent 18 }}

@@ -1,0 +1,13 @@
+apiVersion: v2
+name: rotation-cron
+description: >-
+  In-cluster replacement for nrdot-collector-rotation.yml and
+  infra-bundle-digest-rotation.yml. Those GitHub Actions workflows can never
+  run on this GHE instance -- it has no GitHub-hosted runners and self-hosted
+  runners are disabled by an admin, so every scheduled trigger queues forever
+  and is auto-killed after ~36h. This chart runs the same two rotation
+  scripts as K8s CronJobs instead, against data-integrations/database-
+  corient-canaries on source.datanerd.us.
+type: application
+version: 0.1.0
+appVersion: "1.0"
