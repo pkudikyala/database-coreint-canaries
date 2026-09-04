@@ -12,7 +12,7 @@ metadata:
 spec:
   description: Cluster tooling (ArgoCD self-management)
   sourceRepos:
-    - https://github.com/pkudikyala/database-coreint-canaries.git
+    - git@source.datanerd.us:data-integrations/database-corient-canaries.git
   destinations:
     - namespace: '*'
       server: https://kubernetes.default.svc
@@ -28,7 +28,7 @@ metadata:
 spec:
   description: Database integration canary deployments
   sourceRepos:
-    - https://github.com/pkudikyala/database-coreint-canaries.git
+    - git@source.datanerd.us:data-integrations/database-corient-canaries.git
   destinations:
     - namespace: '*'
       server: https://kubernetes.default.svc
@@ -46,8 +46,8 @@ spec:
   project: cluster-meta
   source:
     path: clusters/aws
-    repoURL: https://github.com/pkudikyala/database-coreint-canaries.git
-    targetRevision: main
+    repoURL: git@source.datanerd.us:data-integrations/database-corient-canaries.git
+    targetRevision: master
   destination:
     server: https://kubernetes.default.svc
     namespace: tools-argocd

@@ -2,24 +2,25 @@
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
-  name: can-nri-mysql-candidate
+  name: can-mssql-candidate
   namespace: tools-argocd
 spec:
   project: canaries
   source:
-    path: canaries/nri-mysql
+    path: canaries/otel-mssql
     repoURL: git@source.datanerd.us:data-integrations/database-corient-canaries.git
     targetRevision: master
     helm:
-      releaseName: nri-mysql-candidate
+      releaseName: mssql-candidate
       valueFiles:
+        - otel-collector-values.yaml
         - values.yaml
         - values-candidate.yaml
       parameters:
         - name: environment
           value: candidate
   destination:
-    namespace: can-nri-mysql-candidate
+    namespace: can-mssql-candidate
     server: https://kubernetes.default.svc
   syncPolicy:
     syncOptions:

@@ -8,8 +8,8 @@ spec:
   project: canaries
   source:
     path: canaries/nri-mysql
-    repoURL: https://github.com/pkudikyala/database-coreint-canaries.git
-    targetRevision: main
+    repoURL: git@source.datanerd.us:data-integrations/database-corient-canaries.git
+    targetRevision: master
     helm:
       releaseName: nri-mysql-stable
       valueFiles:
