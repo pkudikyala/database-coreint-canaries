@@ -8,8 +8,8 @@ spec:
   project: cluster-meta
   source:
     path: tools/rotation-cron
-    repoURL: https://github.com/pkudikyala/database-coreint-canaries.git
-    targetRevision: main
+    repoURL: git@source.datanerd.us:data-integrations/database-corient-canaries.git
+    targetRevision: master
   destination:
     namespace: tools-rotation-cron
     server: https://kubernetes.default.svc
